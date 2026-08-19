@@ -70,7 +70,9 @@ const tasksSlice = createSlice({
       })
       .addCase(addTask.fulfilled, (state, action) => {
         const t = action.payload;
-        if (t && !state.items.some((x) => x.id === t.id)) state.items.push(t);
+        if (t && t.id && !state.items.some((x) => String(x.id) === String(t.id))) {
+          state.items.unshift(t);
+        }
       })
       .addCase(addTask.rejected, (state, action) => {
         state.error = action.error.message || "Failed to create task";
