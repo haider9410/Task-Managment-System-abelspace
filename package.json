@@ -4,6 +4,6 @@
   "private": true,
   "scripts": {
     "build": "npm run build --prefix frontend",
-    "start": "npm run start --prefix frontend"
+    "deploy": "npx wrangler pages deploy frontend/out"
   }
 }

@@ -1,9 +1,12 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "ablespace-workspace",
-  "pages_build_output_dir": "frontend/out",
+  "name": "haidar9410taskmanagmentsystemablespace",
   "compatibility_date": "2024-09-23",
   "compatibility_flags": [
     "nodejs_compat"
-  ]
+  ],
+  "pages_build_output_dir": "frontend/out",
+  "assets": {
+    "directory": "frontend/out"
+  }
 }
