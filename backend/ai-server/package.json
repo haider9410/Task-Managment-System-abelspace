@@ -1,0 +1,18 @@
+{
+  "name": "ablespace-ai-server",
+  "version": "1.0.0",
+  "description": "Groq-powered AI agent bridge that manages AbleSpace via MCP",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch index.js",
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "openai": "^4.86.0"
+  }
+}

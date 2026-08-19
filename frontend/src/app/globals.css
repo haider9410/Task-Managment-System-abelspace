@@ -1,0 +1,78 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  --accent: #171717;
+  --accent-foreground: #ffffff;
+}
+
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* ---------------------------------------------------------------
+   Custom scrollbar — thin, rounded, violet accent, light/dark aware.
+   Apply globally, or scope it by adding a class (e.g. `.ablespace-scroll`)
+   to just the elements you want styled instead of `*`.
+   --------------------------------------------------------------- */
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(196 181 253) transparent; /* thumb: violet-300 */
+}
+.dark * {
+  scrollbar-color: rgb(109 40 217) transparent; /* thumb: violet-700 */
+}
+
+/* WebKit (Chrome, Safari, Edge) */
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: rgb(196 181 253); /* violet-300 */
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(167 139 250); /* violet-400 */
+}
+
+.dark *::-webkit-scrollbar-thumb {
+  background-color: rgb(91 33 182); /* violet-800 */
+}
+
+.dark *::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(124 58 237); /* violet-600 */
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
