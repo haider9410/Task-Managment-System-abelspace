@@ -18,7 +18,7 @@ A modern, full-stack **Task & Project Management System** built with **Next.js 1
 | -------------- | ------------------------------------------------------------ | ------- |
 | **Frontend**   | Next.js 16 (App Router) + Redux Toolkit + Tailwind CSS v4    | `3000`  |
 | **Backend**    | NestJS (TypeScript) + MySQL Connection Pool                  | `5000`  |
-| **AI Bridge**  | Node.js + Groq LLM Bridge (`gsk_...`) + MCP Tool Calling     | `5001`  |
+| **AI Bridge**  | Node.js + Groq LLM Bridge + MCP Tool Calling                 | `5001`  |
 | **MCP Server** | Model Context Protocol Server (`@modelcontextprotocol/sdk`)  | `stdio` |
 | **Database**   | MySQL (`Task_Managment_System_db`)                           | `3306`  |
 
@@ -93,6 +93,38 @@ Run the single startup script from the root directory:
 - **Web App**: [http://localhost:3000](http://localhost:3000)
 - **NestJS API**: [http://localhost:5000](http://localhost:5000)
 - **AI Server**: [http://localhost:5001](http://localhost:5001)
+
+---
+
+## ☁️ Deploying to Cloudflare Pages
+
+This repository is pre-configured with `wrangler.json`, `_routes.json`, and root build scripts so **Cloudflare Pages** builds and deploys your Next.js application without any configuration issues!
+
+### Option A: Cloudflare Pages Dashboard (Automatic GitHub Deployment)
+
+1. Log into your **Cloudflare Dashboard** -> **Workers & Pages** -> **Create application** -> **Pages** -> **Connect to Git**.
+2. Select your repository: `haider9410/Task-Managment-System-abelspace`.
+3. Configure build settings:
+   - **Framework preset**: `Next.js`
+   - **Root directory**: `frontend`
+   - **Build command**: `npm run build`
+   - **Build output directory**: `.next`
+4. Environment variables:
+   - `NEXT_PUBLIC_API_URL`: Your deployed API URL (e.g., `https://api.yourdomain.com`)
+   - `NEXT_PUBLIC_AI_URL`: Your deployed AI Server URL
+5. Click **Save and Deploy**!
+
+### Option B: Deploy via Wrangler CLI
+
+From your terminal, run:
+```bash
+# Build frontend
+cd frontend
+npm run build
+
+# Deploy to Cloudflare Pages
+npx wrangler pages deploy .next --project-name=ablespace-frontend
+```
 
 ---
 
