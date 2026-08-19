@@ -362,7 +362,7 @@ function BoardColumn({
           onDrop(column.id);
         }
       }}
-      className={`flex h-full w-80 shrink-0 flex-col rounded-2xl border border-gray-200/80 dark:border-gray-800/80 bg-gray-100/60 dark:bg-gray-900/50 p-3 transition-all ${
+      className={`flex h-full w-[85vw] sm:w-80 shrink-0 snap-center flex-col rounded-2xl border border-gray-200/80 dark:border-gray-800/80 bg-gray-100/60 dark:bg-gray-900/50 p-3 transition-all ${
         isColumnDragging ? "opacity-30 scale-95" : ""
       } ${over ? "bg-gray-200/60 dark:bg-gray-800/60 border-blue-400/50" : ""}`}
     >
@@ -1031,8 +1031,8 @@ export default function TaskManager() {
           <Loader2 size={16} className="animate-spin" /> Loading tasks…
         </div>
       ) : view === "board" ? (
-        <div className="h-full overflow-x-auto overflow-y-hidden">
-          <div className="flex h-full min-w-max gap-4">
+        <div className="h-full overflow-x-auto overflow-y-hidden pb-2 px-2 sm:px-4">
+          <div className="flex h-full min-w-max gap-3 sm:gap-4 snap-x snap-mandatory">
             {columnList.map((col) => (
               <BoardColumn
                 key={col.id}
@@ -1077,6 +1077,12 @@ export default function TaskManager() {
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-gray-50 dark:bg-gray-950 font-sans text-gray-800 dark:text-gray-100">
+      {!sidebarCollapsed && (
+        <div
+          onClick={() => setSidebarCollapsed(true)}
+          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs md:hidden"
+        />
+      )}
       <Sidebar
         collapsed={sidebarCollapsed}
         userName={userName}
