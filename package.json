@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "npm run build --prefix frontend",
-    "deploy": "npx wrangler pages deploy frontend/out"
+    "build": "cd frontend && npm run build"
   }
 }
