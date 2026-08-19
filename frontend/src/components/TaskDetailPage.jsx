@@ -30,6 +30,7 @@ import {
   Copy,
   AlertTriangle,
   Folder,
+  Pencil,
 } from "lucide-react";
 import DatePicker from "./DatePicker";
 
@@ -207,6 +208,7 @@ export default function TaskDetailPage({
   priorities,
   projects = [],
   defaultProjectId = "",
+  startInEditMode = false,
   onBack,
   onSave,
   onDelete,
@@ -219,7 +221,12 @@ export default function TaskDetailPage({
   const myName = user?.name || user?.nickname || user?.email || "Guest";
   const myPicture = user?.picture || "";
 
+  const [isEditing, setIsEditing] = useState(startInEditMode || !isEdit);
+  useEffect(() => {
+    setIsEditing(startInEditMode || !initial);
+  }, [initial, startInEditMode]);
   const [title, setTitle] = useState(initial?.title ?? "");
+  const [titleError, setTitleError] = useState(false);
   const [desc, setDesc] = useState(initial?.desc ?? "");
   const [status, setStatus] = useState(
     initial?.status ?? defaultStatus ?? columns[0].id,
@@ -401,7 +408,11 @@ export default function TaskDetailPage({
   /* ------------------------------- submit ------------------------------ */
 
   const submit = () => {
-    if (!title.trim()) return;
+    if (!title.trim()) {
+      setTitleError(true);
+      return;
+    }
+    setTitleError(false);
     onSave({
       ...buildTask(),
       title: title.trim(),
@@ -577,19 +588,64 @@ export default function TaskDetailPage({
       <div className="flex min-h-0 flex-1 overflow-hidden">
         {/* main column */}
         <div className="min-w-0 flex-1 overflow-y-auto px-8 py-6">
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Untitled Task"
-            className="mb-2 w-full border-none bg-transparent text-2xl font-semibold text-gray-900 dark:text-gray-100 outline-none placeholder:text-gray-300 dark:placeholder:text-gray-600"
-          />
-          <textarea
-            value={desc}
-            onChange={(e) => setDesc(e.target.value)}
-            placeholder="Add a description…"
-            rows={2}
-            className="mb-6 w-full resize-none border-none bg-transparent text-sm leading-relaxed text-gray-500 dark:text-gray-400 outline-none placeholder:text-gray-300 dark:placeholder:text-gray-600"
-          />
+          {!isEditing && isEdit ? (
+            <div className="mb-6 space-y-3 rounded-xl border border-gray-100 dark:border-gray-800/60 bg-gray-50/30 dark:bg-gray-900/30 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 select-none">
+                  {title || "Untitled Task"}
+                </h1>
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(true)}
+                  className="flex shrink-0 items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+                >
+                  <Pencil size={13} /> Edit Task
+                </button>
+              </div>
+              <p className="text-sm leading-relaxed text-gray-600 dark:text-gray-300 select-none whitespace-pre-wrap">
+                {desc || "No description provided."}
+              </p>
+            </div>
+          ) : (
+            <div className="mb-6 space-y-4">
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                  Task Title <span className="text-red-500">*</span>
+                </label>
+                <input
+                  value={title}
+                  onChange={(e) => {
+                    setTitle(e.target.value);
+                    if (e.target.value.trim()) setTitleError(false);
+                  }}
+                  placeholder="Enter task title..."
+                  className={`w-full rounded-xl border bg-gray-50/50 dark:bg-gray-900/50 px-4 py-2.5 text-lg font-semibold text-gray-900 dark:text-gray-100 outline-none transition focus:bg-white dark:focus:bg-gray-900 focus:ring-2 ${
+                    titleError
+                      ? "border-red-500 focus:ring-red-400/20 text-red-600 dark:text-red-400 placeholder:text-red-400"
+                      : "border-gray-200 dark:border-gray-800 focus:border-gray-400 dark:focus:border-gray-600 focus:ring-gray-400/20 placeholder:text-gray-400"
+                  }`}
+                />
+                {titleError && (
+                  <p className="mt-1 flex items-center gap-1 text-xs font-medium text-red-500 dark:text-red-400">
+                    <AlertTriangle size={12} /> Please enter a title for the task.
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                  Description
+                </label>
+                <textarea
+                  value={desc}
+                  onChange={(e) => setDesc(e.target.value)}
+                  placeholder="Add a detailed description..."
+                  rows={3}
+                  className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 outline-none transition focus:bg-white dark:focus:bg-gray-900 focus:border-gray-400 dark:focus:border-gray-600 focus:ring-2 focus:ring-gray-400/20 placeholder:text-gray-400"
+                />
+              </div>
+            </div>
+          )}
 
           {/* Properties */}
           <div className="mb-4 flex items-start gap-4 text-sm">

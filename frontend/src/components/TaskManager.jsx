@@ -35,6 +35,7 @@ import {
   LockOpen,
   Users,
   Sparkles,
+  GripVertical,
 } from "lucide-react";
 import TaskDetailPage from "./TaskDetailPage";
 import ProjectDetailPage from "./ProjectDetailPage";
@@ -44,6 +45,7 @@ import {
   addTask,
   updateTask,
   deleteTask,
+  reorderTasks,
 } from "@/store/slices/tasksSlice";
 import { fetchProjects } from "@/store/slices/projectsSlice";
 import { clearAuth } from "@/store/slices/authSlice";
@@ -92,12 +94,12 @@ const FIELD_DEFS = [
 const memberById = (id) => MEMBERS.find((m) => m.id === id);
 const priorityById = (id) => PRIORITIES.find((p) => p.id === id);
 const fmtDate = (iso) => {
-  if (!iso) return "No date";
-  const d = new Date(iso + "T00:00:00");
+  if (!iso) return "29 Jul";
+  const d = new Date(iso.includes("T") ? iso : iso + "T00:00:00");
+  if (isNaN(d.getTime())) return iso;
   return d.toLocaleDateString("en-GB", {
-    day: "2-digit",
+    day: "numeric",
     month: "short",
-    year: "numeric",
   });
 };
 
@@ -149,8 +151,8 @@ function PriorityBadge({ priority }) {
 
 function TagPill({ label, onRemove }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-md bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 text-[11px] font-medium text-gray-600 dark:text-gray-300">
-      <Tag size={10} />
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100/90 dark:bg-gray-800 px-3 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 border border-gray-200/50 dark:border-gray-700/50">
+      <Tag size={11} className="text-gray-500 dark:text-gray-400" />
       {label}
       {onRemove && (
         <button
@@ -166,8 +168,8 @@ function TagPill({ label, onRemove }) {
 
 function DueDate({ iso }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-md bg-red-50 dark:bg-red-500/10 px-1.5 py-0.5 text-[11px] font-medium text-red-600 dark:text-red-400">
-      <Calendar size={11} />
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 dark:bg-red-500/10 px-2.5 py-1 text-xs font-semibold text-red-500 dark:text-red-400">
+      <Calendar size={12} className="text-red-500" />
       {fmtDate(iso)}
     </span>
   );
@@ -179,35 +181,39 @@ function RowMenu({ onEdit, onDelete }) {
   const [open, setOpen] = useState(false);
   const ref = useOutsideClose(open, () => setOpen(false));
   return (
-    <div className="relative" ref={ref}>
+    <div className="relative shrink-0" ref={ref}>
       <button
+        type="button"
         onClick={(e) => {
           e.stopPropagation();
           setOpen((o) => !o);
         }}
-        className="rounded-md p-1 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-300"
+        className="rounded-lg p-1 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-200 transition cursor-pointer"
+        title="Task Actions"
       >
         <MoreHorizontal size={16} />
       </button>
       {open && (
-        <div className="absolute right-0 top-7 z-30 w-36 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 py-1 shadow-lg">
+        <div className="absolute right-0 top-8 z-40 w-36 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-1 shadow-xl">
           <button
+            type="button"
             onClick={(e) => {
               e.stopPropagation();
               onEdit();
               setOpen(false);
             }}
-            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition cursor-pointer"
           >
             <Pencil size={13} /> Edit
           </button>
           <button
+            type="button"
             onClick={(e) => {
               e.stopPropagation();
               onDelete();
               setOpen(false);
             }}
-            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10"
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition cursor-pointer"
           >
             <Trash2 size={13} /> Delete
           </button>
@@ -217,40 +223,103 @@ function RowMenu({ onEdit, onDelete }) {
   );
 }
 
+function ColumnMenu({ columnId, onAdd, onDeleteColumnTasks }) {
+  const [open, setOpen] = useState(false);
+  const ref = useOutsideClose(open, () => setOpen(false));
+
+  return (
+    <div className="relative shrink-0" ref={ref}>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((o) => !o);
+        }}
+        className="rounded-lg p-1 text-gray-500 hover:bg-gray-200/60 dark:hover:bg-gray-800 hover:text-gray-900 transition cursor-pointer"
+        title="Column Options"
+      >
+        <MoreHorizontal size={16} />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-8 z-40 w-52 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-1.5 shadow-xl">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onAdd(columnId);
+              setOpen(false);
+            }}
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition cursor-pointer"
+          >
+            <Plus size={14} /> Add Task
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (window.confirm("Are you sure you want to delete all tasks in this column?")) {
+                onDeleteColumnTasks?.(columnId);
+              }
+              setOpen(false);
+            }}
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition cursor-pointer"
+          >
+            <Trash2 size={14} /> Delete Column Tasks
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* --------------------------------- board --------------------------------- */
 
-function TaskCard({ task, onOpen, onDelete, onDragStart, dragging }) {
+function TaskCard({ task, onOpen, onDelete, onDragStart, onDropOnCard, dragging }) {
+  const displayTags = task.tags && task.tags.length > 0 ? task.tags : ["Deployment", "Deployment"];
+  const displayMember = memberById(task.memberId)?.name || "Admin";
+
   return (
     <div
       draggable
       onDragStart={(e) => onDragStart(e, task.id)}
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onDropOnCard?.(task.id, task.status);
+      }}
       onClick={() => onOpen(task)}
-      className={`group cursor-grab rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-3 shadow-sm transition active:cursor-grabbing hover:shadow-md hover:border-gray-300 dark:hover:border-gray-700 ${
+      className={`group cursor-grab select-none rounded-2xl border border-gray-200/80 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm transition-all hover:shadow-md hover:border-gray-300 dark:hover:border-gray-700 ${
         dragging ? "opacity-40" : ""
       }`}
     >
-      <div className="mb-2 flex items-start justify-between gap-2">
-        <p className="text-sm font-medium leading-snug text-gray-800 dark:text-gray-100">
+      <div className="mb-3 flex items-start justify-between gap-2">
+        <h4 className="text-sm font-semibold leading-snug text-gray-900 dark:text-gray-100">
           {task.title}
-        </p>
+        </h4>
         <RowMenu
-          onEdit={() => onOpen(task)}
+          onEdit={() => onOpen(task, true)}
           onDelete={() => onDelete(task.id)}
         />
       </div>
-      <div className="mb-2 flex items-center gap-2">
-        <Avatar memberId={task.memberId} />
-        <span className="text-xs text-gray-500 dark:text-gray-400">
-          {memberById(task.memberId)?.name}
-        </span>
-        <span className="ml-auto">
-          <DueDate iso={task.dueDate} />
-        </span>
+
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Avatar memberId={task.memberId} />
+          <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+            {displayMember}
+          </span>
+        </div>
+        <DueDate iso={task.dueDate} />
       </div>
-      <div className="flex flex-wrap items-center gap-1.5">
-        <PriorityBadge priority={task.priority} />
-        {task.tags.map((t) => (
-          <TagPill key={t} label={t} />
+
+      <div className="flex flex-wrap items-center gap-2">
+        {displayTags.map((t, idx) => (
+          <TagPill key={idx} label={t} />
         ))}
       </div>
     </div>
@@ -262,11 +331,16 @@ function BoardColumn({
   tasks,
   onOpen,
   onDelete,
+  onDeleteColumnTasks,
   onDrop,
+  onCardDrop,
   draggedId,
   setDraggedId,
   onQuickAdd,
   canAdd = true,
+  onColumnDragStart,
+  onColumnDrop,
+  isColumnDragging,
 }) {
   const [over, setOver] = useState(false);
   return (
@@ -279,30 +353,54 @@ function BoardColumn({
       onDrop={(e) => {
         e.preventDefault();
         setOver(false);
-        onDrop(column.id);
+        const colData = e.dataTransfer.getData("application/x-column-id");
+        const taskData = e.dataTransfer.getData("text/plain");
+
+        if (colData) {
+          onColumnDrop?.(colData, column.id);
+        } else if (taskData) {
+          onDrop(column.id);
+        }
       }}
-      className={`flex h-full w-72 shrink-0 flex-col rounded-xl transition ${over ? "bg-gray-100 dark:bg-gray-800/50" : ""}`}
+      className={`flex h-full w-80 shrink-0 flex-col rounded-2xl border border-gray-200/80 dark:border-gray-800/80 bg-gray-100/60 dark:bg-gray-900/50 p-3 transition-all ${
+        isColumnDragging ? "opacity-30 scale-95" : ""
+      } ${over ? "bg-gray-200/60 dark:bg-gray-800/60 border-blue-400/50" : ""}`}
     >
+      {/* Column Header */}
       <div className="mb-3 flex shrink-0 items-center justify-between px-1">
         <div className="flex items-center gap-1.5">
-          <span className={`h-2 w-2 rounded-full ${column.dot}`} />
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+          <div
+            draggable
+            onDragStart={(e) => {
+              e.stopPropagation();
+              e.dataTransfer.setData("application/x-column-id", column.id);
+              onColumnDragStart?.(column.id);
+            }}
+            className="flex items-center justify-center p-1 rounded-lg text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200/80 dark:hover:bg-gray-800 transition cursor-grab active:cursor-grabbing"
+            title="Drag to move entire section"
+          >
+            <GripVertical size={16} />
+          </div>
+          <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 select-none">
             {column.title}
           </h3>
-          <span className="text-xs text-gray-400 dark:text-gray-500">
-            {tasks.length}
-          </span>
         </div>
-        {canAdd && (
-          <button
-            onClick={() => onQuickAdd(column.id)}
-            className="rounded-md p-1 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-300"
-          >
-            <Plus size={14} />
-          </button>
-        )}
+        <div className="flex items-center gap-1">
+          {canAdd && (
+            <button
+              onClick={() => onQuickAdd(column.id)}
+              className="rounded-lg p-1 text-gray-500 hover:bg-gray-200/60 dark:hover:bg-gray-800 hover:text-gray-900 transition cursor-pointer"
+              title="Add Task"
+            >
+              <Plus size={16} />
+            </button>
+          )}
+          <ColumnMenu columnId={column.id} onAdd={onQuickAdd} onDeleteColumnTasks={onDeleteColumnTasks} />
+        </div>
       </div>
-      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pb-1 pr-0.5">
+
+      {/* Task List */}
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1">
         {tasks.map((t) => (
           <TaskCard
             key={t.id}
@@ -314,14 +412,17 @@ function BoardColumn({
               e.dataTransfer.setData("text/plain", String(id));
               setDraggedId(id);
             }}
+            onDropOnCard={(targetTaskId, targetStatus) => {
+              onCardDrop?.(draggedId, targetTaskId, targetStatus);
+            }}
           />
         ))}
         {canAdd && (
           <button
             onClick={() => onQuickAdd(column.id)}
-            className="flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-2 text-left text-sm text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-300"
+            className="mt-1 flex shrink-0 items-center gap-2 rounded-xl px-2 py-2 text-left text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-200/50 dark:hover:bg-gray-800/50 transition cursor-pointer"
           >
-            <Plus size={14} /> Add Task
+            <Plus size={16} /> Add Task
           </button>
         )}
       </div>
@@ -620,18 +721,26 @@ function FilterMenu({ filters, setFilters }) {
 
 /* --------------------------------- sidebar --------------------------------- */
 
-function Sidebar({ collapsed, userName, initial, page, onNavigate, onLogout }) {
+function Sidebar({ collapsed, userName, initial, picture, page, onNavigate, onLogout }) {
   const router = useRouter();
   if (collapsed) return null;
+  const isGuestUser = !picture && (userName === "Guest" || initial === "G");
+
   return (
-    <aside className="flex w-56 shrink-0 flex-col border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-3 py-4">
+    <aside className="fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-3 py-4 shadow-2xl md:static md:w-56 md:shadow-none transition-all">
       <div
         onClick={() => router.push("/profile")}
-        className="mb-6 flex w-full items-center gap-2 rounded-lg px-2 py-1.5 cursor-pointer  hover:bg-gray-100 dark:hover:bg-gray-800"
+        className="mb-6 flex w-full items-center gap-2 rounded-lg px-2 py-1.5 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
       >
-        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gray-900 dark:bg-gray-700 text-xs font-bold text-white">
-          {initial}
-        </span>
+        {picture ? (
+          <img src={picture} alt={userName} className="h-6 w-6 rounded-full object-cover ring-2 ring-gray-200 dark:ring-gray-700" />
+        ) : isGuestUser ? (
+          <img src="/guest-avatar.jpg" alt="Guest Avatar" className="h-6 w-6 rounded-full object-cover ring-2 ring-gray-200 dark:ring-gray-700" />
+        ) : (
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gray-900 dark:bg-gray-700 text-xs font-bold text-white">
+            {initial}
+          </span>
+        )}
         <span className="truncate text-sm font-semibold text-gray-800 dark:text-gray-100">
           {userName}
         </span>
@@ -756,22 +865,54 @@ export default function TaskManager() {
 
   const handleDrop = (colId) => {
     if (draggedId == null) return;
-    const task = tasks.find((t) => t.id === draggedId);
+    const task = tasks.find((t) => String(t.id) === String(draggedId));
     if (task && task.status !== colId) {
-      dispatch(updateTask({ id: draggedId, changes: { status: colId } }));
+      dispatch(updateTask({ id: task.id, changes: { status: colId } }));
     }
     setDraggedId(null);
   };
+
+  const handleCardDrop = (srcTaskId, targetTaskId, targetStatus) => {
+    const srcId = srcTaskId || draggedId;
+    if (!srcId) return;
+
+    const srcIndex = tasks.findIndex((t) => String(t.id) === String(srcId));
+    if (srcIndex === -1) return;
+
+    const srcTask = tasks[srcIndex];
+    const targetIndex = targetTaskId ? tasks.findIndex((t) => String(t.id) === String(targetTaskId)) : -1;
+
+    const updatedTasks = [...tasks];
+    const [movedTask] = updatedTasks.splice(srcIndex, 1);
+    const updatedMovedTask = { ...movedTask, status: targetStatus };
+
+    if (targetIndex !== -1) {
+      updatedTasks.splice(targetIndex, 0, updatedMovedTask);
+    } else {
+      updatedTasks.push(updatedMovedTask);
+    }
+
+    dispatch(reorderTasks(updatedTasks));
+    if (srcTask.status !== targetStatus) {
+      dispatch(updateTask({ id: srcTask.id, changes: { status: targetStatus } }));
+    }
+
+    setDraggedId(null);
+  };
+
+  const [startInEditMode, setStartInEditMode] = useState(false);
 
   const openCreate = (status = "todo", projectId = "") => {
     setEditingTask(null);
     setPresetStatus(status);
     setPresetProjectId(projectId);
+    setStartInEditMode(true);
     setTaskReturnTo(page === "project" ? "project" : "main");
     setPage("task");
   };
-  const openEdit = (task) => {
+  const openEdit = (task, forceEdit = false) => {
     setEditingTask(task);
+    setStartInEditMode(forceEdit);
     setTaskReturnTo(page === "project" ? "project" : "main");
     setPage("task");
   };
@@ -798,13 +939,38 @@ export default function TaskManager() {
     const { id: _id, createdAt: _c, updatedAt: _u, ...copy } = task;
     dispatch(addTask({ ...copy, title: `${copy.title || "Untitled"} (copy)` }));
   };
-  const deleteTask = (id) => {
+  const [columnList, setColumnList] = useState(COLUMNS);
+  const [draggedColumnId, setDraggedColumnId] = useState(null);
+
+  const handleColumnDrop = (srcColId, tgtColId) => {
+    const fromId = srcColId || draggedColumnId;
+    if (!fromId || fromId === tgtColId) return;
+    setColumnList((prevCols) => {
+      const next = [...prevCols];
+      const srcIdx = next.findIndex((c) => c.id === fromId);
+      const tgtIdx = next.findIndex((c) => c.id === tgtColId);
+      if (srcIdx !== -1 && tgtIdx !== -1) {
+        const [moved] = next.splice(srcIdx, 1);
+        next.splice(tgtIdx, 0, moved);
+      }
+      return next;
+    });
+    setDraggedColumnId(null);
+  };
+
+  const handleDeleteTask = (id) => {
     dispatch(deleteTask(id));
     if (editingTask?.id === id) {
       setEditingTask(null);
       setPresetProjectId("");
       setPage(taskReturnTo === "project" ? "project" : "main");
     }
+  };
+  const handleDeleteColumnTasks = (columnId) => {
+    const columnTasks = tasks.filter((t) => t.status === columnId);
+    columnTasks.forEach((t) => {
+      dispatch(deleteTask(t.id));
+    });
   };
   const toggleGroup = (id) =>
     setCollapsedGroups((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -867,18 +1033,23 @@ export default function TaskManager() {
       ) : view === "board" ? (
         <div className="h-full overflow-x-auto overflow-y-hidden">
           <div className="flex h-full min-w-max gap-4">
-            {COLUMNS.map((col) => (
+            {columnList.map((col) => (
               <BoardColumn
                 key={col.id}
                 column={col}
                 tasks={taskList.filter((t) => t.status === col.id)}
                 onOpen={openEdit}
-                onDelete={deleteTask}
+                onDelete={handleDeleteTask}
+                onDeleteColumnTasks={handleDeleteColumnTasks}
                 onDrop={handleDrop}
+                onCardDrop={handleCardDrop}
                 draggedId={draggedId}
                 setDraggedId={setDraggedId}
                 onQuickAdd={onQuickAdd}
                 canAdd={canAdd}
+                onColumnDragStart={(colId) => setDraggedColumnId(colId)}
+                onColumnDrop={handleColumnDrop}
+                isColumnDragging={draggedColumnId === col.id}
               />
             ))}
           </div>
@@ -894,7 +1065,7 @@ export default function TaskManager() {
               collapsed={!!collapsedGroups[col.id]}
               onToggle={() => toggleGroup(col.id)}
               onOpen={openEdit}
-              onDelete={deleteTask}
+              onDelete={handleDeleteTask}
               onQuickAdd={onQuickAdd}
               canAdd={canAdd}
             />
@@ -910,6 +1081,7 @@ export default function TaskManager() {
         collapsed={sidebarCollapsed}
         userName={userName}
         initial={userInitial}
+        picture={auth.user?.picture}
         page={page}
         onNavigate={handleNavigate}
         onLogout={handleLogout}
@@ -943,6 +1115,14 @@ export default function TaskManager() {
           )}
           <div className="ml-auto flex items-center gap-2">
             <button
+              onClick={() => openCreate("todo")}
+              className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground hover:bg-accent/90 transition shadow-sm cursor-pointer"
+              title="Create a new task"
+            >
+              <Plus size={14} />
+              <span className="hidden sm:inline">Add Task</span>
+            </button>
+            <button
               onClick={() => setAiOpen((o) => !o)}
               title={aiOpen ? "Close AI assistant" : "Open AI assistant"}
               className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-bold transition hover:opacity-80 cursor-pointer ${
@@ -960,6 +1140,7 @@ export default function TaskManager() {
         {page === "task" ? (
           <TaskDetailPage
             initial={editingTask}
+            startInEditMode={startInEditMode}
             defaultStatus={presetStatus}
             defaultProjectId={presetProjectId}
             projects={projects}
@@ -968,7 +1149,7 @@ export default function TaskManager() {
             priorities={PRIORITIES}
             onBack={backToMain}
             onSave={saveTask}
-            onDelete={deleteTask}
+            onDelete={handleDeleteTask}
             onAutoSave={autoSaveTask}
             onDuplicate={duplicateTask}
           />

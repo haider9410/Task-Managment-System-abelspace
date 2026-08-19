@@ -259,7 +259,7 @@ $Services = @(
     @{
         Name = "SERVER"
         Folder = "backend/server"
-        Command = "node server.js"
+        Command = "npm run dev"
     },
     @{
         Name = "AI"

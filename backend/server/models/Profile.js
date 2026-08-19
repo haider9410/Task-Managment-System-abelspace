@@ -1,4 +1,4 @@
-import { getPool } from "../db.js";
+import { getPool, isFallback, memoryStore } from "../db.js";
 
 function formatProfile(row) {
   if (!row) return null;
@@ -10,14 +10,21 @@ function formatProfile(row) {
     title: row.title || "",
     username: row.username || "",
     picture: row.picture || "",
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
+    createdAt: row.createdAt || new Date().toISOString(),
+    updatedAt: row.updatedAt || new Date().toISOString(),
   };
 }
 
 export class Profile {
   static async findOne(filter = {}) {
     const pool = await getPool();
+    if (!pool || isFallback()) {
+      if (filter.ownerId) {
+        const p = memoryStore.profiles[filter.ownerId];
+        return p ? formatProfile(p) : null;
+      }
+      return null;
+    }
     if (filter.ownerId) {
       const [rows] = await pool.query("SELECT * FROM profiles WHERE ownerId = ?", [filter.ownerId]);
       return rows.length ? formatProfile(rows[0]) : null;
@@ -27,6 +34,23 @@ export class Profile {
 
   static async create(data) {
     const pool = await getPool();
+    if (!pool || isFallback()) {
+      const id = (memoryStore.profileIdCounter++).toString();
+      const profile = {
+        id,
+        ownerId: data.ownerId,
+        email: data.email || "",
+        name: data.name || "",
+        title: data.title || "",
+        username: data.username || "",
+        picture: data.picture || "",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      memoryStore.profiles[data.ownerId] = profile;
+      return formatProfile(profile);
+    }
+
     const sql = `
       INSERT INTO profiles (ownerId, email, name, title, username, picture)
       VALUES (?, ?, ?, ?, ?, ?)
@@ -52,6 +76,17 @@ export class Profile {
     if (!existing) return null;
 
     const pool = await getPool();
+    if (!pool || isFallback()) {
+      const current = memoryStore.profiles[ownerId] || existing;
+      const updated = {
+        ...current,
+        ...update,
+        updatedAt: new Date().toISOString(),
+      };
+      memoryStore.profiles[ownerId] = updated;
+      return formatProfile(updated);
+    }
+
     const setClauses = [];
     const params = [];
 
@@ -76,6 +111,11 @@ export class Profile {
     const pool = await getPool();
     const existing = await this.findOne({ ownerId });
     if (!existing) return null;
+
+    if (!pool || isFallback()) {
+      delete memoryStore.profiles[ownerId];
+      return existing;
+    }
 
     await pool.query("DELETE FROM profiles WHERE ownerId = ?", [ownerId]);
     return existing;

@@ -234,7 +234,7 @@ export default function AiAgentPanel({ open, onClose }) {
   if (!open) return null;
 
   return (
-    <div className="flex h-full w-[400px] flex-col border-l border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
+    <div className="fixed inset-y-0 right-0 z-50 flex h-full w-full sm:w-[400px] flex-col border-l border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-2xl md:static md:z-auto md:shadow-none">
       <style>{`
         @keyframes ablespace-ring-pulse {
           0%   { transform: scale(1);    opacity: .9; }

@@ -177,6 +177,16 @@ async function runAgent(userId, messages) {
   };
 }
 
+app.get(["/", "/api"], (_req, res) => {
+  res.json({
+    message: "AbleSpace AI Bridge Service is active and running",
+    status: "ok",
+    model: MODEL,
+    health: "/api/health",
+    chatEndpoint: "/api/chat",
+  });
+});
+
 app.get("/api/health", (_req, res) => {
   res.json({
     status: "ok",

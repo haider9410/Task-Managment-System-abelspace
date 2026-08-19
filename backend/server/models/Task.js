@@ -1,4 +1,4 @@
-import { getPool } from "../db.js";
+import { getPool, isFallback, memoryStore } from "../db.js";
 
 function parseJson(val, defaultVal = []) {
   if (!val) return defaultVal;
@@ -28,14 +28,31 @@ function formatTask(row) {
     resources: parseJson(row.resources, []),
     watchers: parseJson(row.watchers, []),
     locked: Boolean(row.locked),
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
+    createdAt: row.createdAt || new Date().toISOString(),
+    updatedAt: row.updatedAt || new Date().toISOString(),
   };
 }
 
 export class Task {
   static async find(queryOpts = {}) {
     const pool = await getPool();
+    if (!pool || isFallback()) {
+      let tasks = [...memoryStore.tasks];
+      if (queryOpts.privateProjectIds && queryOpts.privateProjectIds.length > 0) {
+        tasks = tasks.filter(
+          (t) =>
+            (!t.locked && !queryOpts.privateProjectIds.includes(t.projectId)) ||
+            t.ownerId === queryOpts.me
+        );
+      } else if (queryOpts.me) {
+        tasks = tasks.filter((t) => !t.locked || t.ownerId === queryOpts.me);
+      }
+      if (queryOpts.projectId) {
+        tasks = tasks.filter((t) => t.projectId === queryOpts.projectId);
+      }
+      return tasks.map(formatTask);
+    }
+
     let sql = "SELECT * FROM tasks WHERE 1=1";
     const params = [];
 
@@ -61,12 +78,41 @@ export class Task {
 
   static async findById(id) {
     const pool = await getPool();
+    if (!pool || isFallback()) {
+      const task = memoryStore.tasks.find((t) => t.id.toString() === id.toString());
+      return task ? formatTask(task) : null;
+    }
     const [rows] = await pool.query("SELECT * FROM tasks WHERE id = ?", [id]);
     return rows.length ? formatTask(rows[0]) : null;
   }
 
   static async create(data) {
     const pool = await getPool();
+    if (!pool || isFallback()) {
+      const id = (memoryStore.taskIdCounter++).toString();
+      const newTask = {
+        id,
+        ownerId: data.ownerId || "guest",
+        projectId: data.projectId || "",
+        title: data.title,
+        desc: data.desc || "",
+        status: data.status || "todo",
+        priority: data.priority || "Medium",
+        memberId: data.memberId || "m1",
+        dueDate: data.dueDate || "",
+        tags: Array.isArray(data.tags) ? data.tags : [],
+        subtasks: Array.isArray(data.subtasks) ? data.subtasks : [],
+        comments: Array.isArray(data.comments) ? data.comments : [],
+        resources: Array.isArray(data.resources) ? data.resources : [],
+        watchers: Array.isArray(data.watchers) ? data.watchers : [],
+        locked: !!data.locked,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      memoryStore.tasks.push(newTask);
+      return formatTask(newTask);
+    }
+
     const tagsJson = JSON.stringify(Array.isArray(data.tags) ? data.tags : []);
     const subtasksJson = JSON.stringify(Array.isArray(data.subtasks) ? data.subtasks : []);
     const commentsJson = JSON.stringify(Array.isArray(data.comments) ? data.comments : []);
@@ -103,7 +149,22 @@ export class Task {
 
   static async findOneAndUpdate({ _id, id, ownerId }, update) {
     const pool = await getPool();
-    const taskId = _id || id;
+    const taskId = (_id || id).toString();
+
+    if (!pool || isFallback()) {
+      const index = memoryStore.tasks.findIndex(
+        (t) => t.id.toString() === taskId
+      );
+      if (index === -1) return null;
+      const current = memoryStore.tasks[index];
+      const updated = {
+        ...current,
+        ...update,
+        updatedAt: new Date().toISOString(),
+      };
+      memoryStore.tasks[index] = updated;
+      return formatTask(updated);
+    }
 
     const setClauses = [];
     const params = [];
@@ -141,37 +202,47 @@ export class Task {
     let sql = `UPDATE tasks SET ${setClauses.join(", ")} WHERE id = ?`;
     params.push(taskId);
 
-    if (ownerId) {
-      sql += " AND ownerId = ?";
-      params.push(ownerId);
-    }
-
     const [result] = await pool.query(sql, params);
     if (result.affectedRows === 0) return null;
     return await this.findById(taskId);
   }
 
-  static async findOneAndDelete({ _id, id, ownerId }) {
+  static async findOneAndDelete({ _id, id }) {
     const pool = await getPool();
-    const taskId = _id || id;
+    const taskId = (_id || id).toString();
+
+    if (!pool || isFallback()) {
+      const index = memoryStore.tasks.findIndex(
+        (t) => t.id.toString() === taskId
+      );
+      if (index === -1) return null;
+      const [deleted] = memoryStore.tasks.splice(index, 1);
+      return formatTask(deleted);
+    }
 
     const task = await this.findById(taskId);
     if (!task) return null;
 
-    let sql = "DELETE FROM tasks WHERE id = ?";
-    const params = [taskId];
-
-    if (ownerId) {
-      sql += " AND ownerId = ?";
-      params.push(ownerId);
-    }
-
-    const [result] = await pool.query(sql, params);
+    const [result] = await pool.query("DELETE FROM tasks WHERE id = ?", [taskId]);
     return result.affectedRows > 0 ? task : null;
   }
 
   static async deleteMany(filter = {}) {
     const pool = await getPool();
+    if (!pool || isFallback()) {
+      const initialCount = memoryStore.tasks.length;
+      memoryStore.tasks = memoryStore.tasks.filter((t) => {
+        if (filter.projectId !== undefined && t.projectId !== String(filter.projectId)) {
+          return true;
+        }
+        if (filter.ownerId !== undefined && t.ownerId !== filter.ownerId) {
+          return true;
+        }
+        return false;
+      });
+      return { deletedCount: initialCount - memoryStore.tasks.length };
+    }
+
     let sql = "DELETE FROM tasks WHERE 1=1";
     const params = [];
 
@@ -190,6 +261,18 @@ export class Task {
 
   static async updateMany(filter = {}, update = {}) {
     const pool = await getPool();
+    if (!pool || isFallback()) {
+      let modified = 0;
+      const targetOwner = update.$set?.ownerId || update.ownerId;
+      memoryStore.tasks.forEach((t) => {
+        if (t.ownerId === filter.ownerId) {
+          t.ownerId = targetOwner;
+          modified++;
+        }
+      });
+      return { modifiedCount: modified };
+    }
+
     let sql = "UPDATE tasks SET ownerId = ? WHERE ownerId = ?";
     const params = [update.$set?.ownerId || update.ownerId, filter.ownerId];
 

@@ -102,8 +102,7 @@ function ProfileForm({ profile, auth, saving, saved, error, onSave, onLeave }) {
   const picture =
     auth.user?.picture ||
     form.picture ||
-    "https://api.dicebear.com/9.x/initials/svg?seed=" +
-      encodeURIComponent(form.name || auth.user?.email || "A");
+    "/guest-avatar.jpg";
 
   return (
     <>

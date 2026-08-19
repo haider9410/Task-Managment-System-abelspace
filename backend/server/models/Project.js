@@ -1,4 +1,4 @@
-import { getPool } from "../db.js";
+import { getPool, isFallback, memoryStore } from "../db.js";
 
 function formatProject(row) {
   if (!row) return null;
@@ -11,14 +11,24 @@ function formatProject(row) {
     private: Boolean(row.private),
     priority: row.priority || "no_priority",
     dueDate: row.dueDate || "",
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
+    createdAt: row.createdAt || new Date().toISOString(),
+    updatedAt: row.updatedAt || new Date().toISOString(),
   };
 }
 
 export class Project {
   static async find(queryOpts = {}) {
     const pool = await getPool();
+    if (!pool || isFallback()) {
+      let projects = [...memoryStore.projects];
+      if (queryOpts.private === true && queryOpts.ownerIdNe) {
+        projects = projects.filter((p) => p.private && p.ownerId !== queryOpts.ownerIdNe);
+      } else if (queryOpts.me) {
+        projects = projects.filter((p) => !p.private || p.ownerId === queryOpts.me);
+      }
+      return projects.map(formatProject);
+    }
+
     let sql = "SELECT * FROM projects WHERE 1=1";
     const params = [];
 
@@ -43,12 +53,34 @@ export class Project {
 
   static async findById(id) {
     const pool = await getPool();
+    if (!pool || isFallback()) {
+      const project = memoryStore.projects.find((p) => p.id.toString() === id.toString());
+      return project ? formatProject(project) : null;
+    }
     const [rows] = await pool.query("SELECT * FROM projects WHERE id = ?", [id]);
     return rows.length ? formatProject(rows[0]) : null;
   }
 
   static async create(data) {
     const pool = await getPool();
+    if (!pool || isFallback()) {
+      const id = (memoryStore.projectIdCounter++).toString();
+      const newProject = {
+        id,
+        ownerId: data.ownerId || "guest",
+        name: data.name,
+        desc: data.desc || "",
+        color: data.color || "#171717",
+        private: !!data.private,
+        priority: data.priority || "no_priority",
+        dueDate: data.dueDate || "",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      memoryStore.projects.push(newProject);
+      return formatProject(newProject);
+    }
+
     const sql = `
       INSERT INTO projects (ownerId, name, \`desc\`, color, private, priority, dueDate)
       VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -69,7 +101,22 @@ export class Project {
 
   static async findOneAndUpdate({ _id, id, ownerId }, update) {
     const pool = await getPool();
-    const projectId = _id || id;
+    const projectId = (_id || id).toString();
+
+    if (!pool || isFallback()) {
+      const index = memoryStore.projects.findIndex(
+        (p) => p.id.toString() === projectId && (!ownerId || p.ownerId === ownerId)
+      );
+      if (index === -1) return null;
+      const current = memoryStore.projects[index];
+      const updated = {
+        ...current,
+        ...update,
+        updatedAt: new Date().toISOString(),
+      };
+      memoryStore.projects[index] = updated;
+      return formatProject(updated);
+    }
 
     const setClauses = [];
     const params = [];
@@ -109,7 +156,16 @@ export class Project {
 
   static async findOneAndDelete({ _id, id, ownerId }) {
     const pool = await getPool();
-    const projectId = _id || id;
+    const projectId = (_id || id).toString();
+
+    if (!pool || isFallback()) {
+      const index = memoryStore.projects.findIndex(
+        (p) => p.id.toString() === projectId && (!ownerId || p.ownerId === ownerId)
+      );
+      if (index === -1) return null;
+      const [deleted] = memoryStore.projects.splice(index, 1);
+      return formatProject(deleted);
+    }
 
     const project = await this.findById(projectId);
     if (!project) return null;
@@ -128,6 +184,18 @@ export class Project {
 
   static async updateMany(filter = {}, update = {}) {
     const pool = await getPool();
+    if (!pool || isFallback()) {
+      let modified = 0;
+      const targetOwner = update.$set?.ownerId || update.ownerId;
+      memoryStore.projects.forEach((p) => {
+        if (p.ownerId === filter.ownerId) {
+          p.ownerId = targetOwner;
+          modified++;
+        }
+      });
+      return { modifiedCount: modified };
+    }
+
     let sql = "UPDATE projects SET ownerId = ? WHERE ownerId = ?";
     const params = [update.$set?.ownerId || update.ownerId, filter.ownerId];
 

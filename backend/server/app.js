@@ -32,6 +32,19 @@ app.use(async (_req, res, next) => {
   }
 });
 
+app.get(["/", "/api"], (_req, res) => {
+  res.json({
+    message: "AbleSpace REST API is active and running",
+    status: "ok",
+    health: "/api/health",
+    endpoints: {
+      tasks: "/api/tasks",
+      projects: "/api/projects",
+      profile: "/api/profile",
+    },
+  });
+});
+
 app.get("/api/health", async (_req, res) => {
   try {
     await ensureDb();

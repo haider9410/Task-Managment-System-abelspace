@@ -50,6 +50,9 @@ const tasksSlice = createSlice({
       state.items = [];
       state.error = null;
     },
+    reorderTasks(state, action) {
+      state.items = action.payload;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -89,5 +92,5 @@ const tasksSlice = createSlice({
   },
 });
 
-export const { clearTasks } = tasksSlice.actions;
+export const { clearTasks, reorderTasks } = tasksSlice.actions;
 export default tasksSlice.reducer;

@@ -30,49 +30,33 @@ body {
 }
 
 /* ---------------------------------------------------------------
-   Custom scrollbar — thin, rounded, violet accent, light/dark aware.
-   Apply globally, or scope it by adding a class (e.g. `.ablespace-scroll`)
-   to just the elements you want styled instead of `*`.
+   Caret & Text Selection — Ensure text insertion line (|) ONLY 
+   appears inside editable input & textarea fields, never on static text.
+   --------------------------------------------------------------- */
+
+*:not(input):not(textarea):not([contenteditable="true"]) {
+  caret-color: transparent !important;
+}
+
+input, textarea, [contenteditable="true"] {
+  caret-color: auto !important;
+}
+
+/* ---------------------------------------------------------------
+   Hide all scrollbars globally (Firefox, Chrome, Safari, Edge, IE)
+   Scrolling still works cleanly, but no visible scrollbar line appears.
    --------------------------------------------------------------- */
 
 /* Firefox */
 * {
-  scrollbar-width: thin;
-  scrollbar-color: rgb(196 181 253) transparent; /* thumb: violet-300 */
-}
-.dark * {
-  scrollbar-color: rgb(109 40 217) transparent; /* thumb: violet-700 */
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
 
-/* WebKit (Chrome, Safari, Edge) */
+/* WebKit (Chrome, Safari, Edge, Opera) */
 *::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-*::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-*::-webkit-scrollbar-thumb {
-  background-color: rgb(196 181 253); /* violet-300 */
-  border-radius: 9999px;
-  border: 2px solid transparent;
-  background-clip: content-box;
-}
-
-*::-webkit-scrollbar-thumb:hover {
-  background-color: rgb(167 139 250); /* violet-400 */
-}
-
-.dark *::-webkit-scrollbar-thumb {
-  background-color: rgb(91 33 182); /* violet-800 */
-}
-
-.dark *::-webkit-scrollbar-thumb:hover {
-  background-color: rgb(124 58 237); /* violet-600 */
-}
-
-*::-webkit-scrollbar-corner {
-  background: transparent;
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
 }

@@ -1,39 +1,59 @@
+import "dotenv/config";
 import mysql from "mysql2/promise";
 
-const MYSQL_HOST = process.env.MYSQL_HOST || "localhost";
-const MYSQL_PORT = parseInt(process.env.MYSQL_PORT || "3306", 10);
-const MYSQL_USER = process.env.MYSQL_USER || "root";
-const MYSQL_PASSWORD = process.env.MYSQL_PASSWORD || "";
-const MYSQL_DATABASE = process.env.MYSQL_DATABASE || "pyramid_task_db";
-
 let pool = null;
+let fallbackMode = false;
+
+export const memoryStore = {
+  tasks: [],
+  projects: [],
+  profiles: {},
+  taskIdCounter: 1,
+  projectIdCounter: 1,
+  profileIdCounter: 1,
+};
+
+export function isFallback() {
+  return fallbackMode;
+}
 
 export async function getPool() {
+  if (fallbackMode) return null;
   if (!pool) {
-    // 1. Ensure database exists
-    const sysConn = await mysql.createConnection({
-      host: MYSQL_HOST,
-      port: MYSQL_PORT,
-      user: MYSQL_USER,
-      password: MYSQL_PASSWORD,
-    });
-    await sysConn.query(`CREATE DATABASE IF NOT EXISTS \`${MYSQL_DATABASE}\`;`);
-    await sysConn.end();
+    const MYSQL_HOST = process.env.MYSQL_HOST || "localhost";
+    const MYSQL_PORT = parseInt(process.env.MYSQL_PORT || "3306", 10);
+    const MYSQL_USER = process.env.MYSQL_USER || "root";
+    const MYSQL_PASSWORD = process.env.MYSQL_PASSWORD || "";
+    const MYSQL_DATABASE = process.env.MYSQL_DATABASE || "Task_Managment_System_db";
 
-    // 2. Create database pool
-    pool = mysql.createPool({
-      host: MYSQL_HOST,
-      port: MYSQL_PORT,
-      user: MYSQL_USER,
-      password: MYSQL_PASSWORD,
-      database: MYSQL_DATABASE,
-      waitForConnections: true,
-      connectionLimit: 10,
-      queueLimit: 0,
-    });
+    try {
+      const sysConn = await mysql.createConnection({
+        host: MYSQL_HOST,
+        port: MYSQL_PORT,
+        user: MYSQL_USER,
+        password: MYSQL_PASSWORD,
+        connectTimeout: 5000,
+      });
+      await sysConn.query(`CREATE DATABASE IF NOT EXISTS \`${MYSQL_DATABASE}\`;`);
+      await sysConn.end();
 
-    // 3. Initialize tables
-    await initTables(pool);
+      pool = mysql.createPool({
+        host: MYSQL_HOST,
+        port: MYSQL_PORT,
+        user: MYSQL_USER,
+        password: MYSQL_PASSWORD,
+        database: MYSQL_DATABASE,
+        waitForConnections: true,
+        connectionLimit: 10,
+        queueLimit: 0,
+      });
+
+      await initTables(pool);
+    } catch (err) {
+      console.warn(`[db] MySQL error: ${err.message}. Using local memory store fallback.`);
+      fallbackMode = true;
+      return null;
+    }
   }
   return pool;
 }
@@ -101,7 +121,9 @@ async function initTables(dbPool) {
 
 export async function connectDb() {
   const dbPool = await getPool();
-  // Quick ping check
-  const [rows] = await dbPool.query("SELECT 1 + 1 AS solution");
-  return { via: "mysql", solution: rows[0]?.solution };
+  if (dbPool) {
+    const [rows] = await dbPool.query("SELECT 1 + 1 AS solution");
+    return { via: "mysql", solution: rows[0]?.solution };
+  }
+  return { via: "memory-fallback" };
 }
