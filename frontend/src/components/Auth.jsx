@@ -59,8 +59,7 @@ export default function Auth() {
     }
     const opts = { authorizationParams: {} };
     if (kind === "google") {
-      opts.authorizationParams.connection = "google-oauth2";
-      opts.authorizationParams.screen_hint = "signup";
+      opts.authorizationParams.prompt = "login";
     } else if (kind === "signup") {
       opts.authorizationParams.screen_hint = "signup";
     } else {
