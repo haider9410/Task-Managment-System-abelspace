@@ -260,7 +260,7 @@ function ProjectFormModal({ mode, project, onClose, onSave }) {
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="w-full max-w-md rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-2xl">
+      <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-6 shadow-2xl">
         <div className="mb-5 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
             {mode === "edit" ? "Edit project" : "New project"}

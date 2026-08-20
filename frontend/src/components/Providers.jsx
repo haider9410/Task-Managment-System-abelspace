@@ -12,7 +12,7 @@ const AUTH0_DOMAIN = "dev-8v4em6yqpctc0css.us.auth0.com";
 const AUTH0_CLIENT_ID = "UdEyPCGS1DU5Aqozdv6YMHBjGdmhti28";
 
 function AuthBridge() {
-  const { isLoading, isAuthenticated, user, error } = useAuth0();
+  const { isLoading, isAuthenticated, user } = useAuth0();
   const dispatch = useDispatch();
 
   useEffect(() => {
@@ -26,10 +26,10 @@ function AuthBridge() {
         isLoading: false,
         isAuthenticated,
         user: isAuthenticated ? user : null,
-        error: isAuthenticated ? null : error?.message || null,
+        error: null,
       })
     );
-  }, [isLoading, isAuthenticated, user, error, dispatch]);
+  }, [isLoading, isAuthenticated, user, dispatch]);
 
   return null;
 }
@@ -58,14 +58,19 @@ function ThemeBridge() {
 }
 
 export default function Providers({ children }) {
+  const origin =
+    typeof window !== "undefined" && window.location.origin
+      ? window.location.origin
+      : "http://localhost:3000";
+
   return (
     <Auth0Provider
       domain={AUTH0_DOMAIN}
       clientId={AUTH0_CLIENT_ID}
       authorizationParams={{
-        redirect_uri:
-          typeof window !== "undefined" ? window.location.origin : undefined,
+        redirect_uri: origin,
       }}
+      skipRedirectCallback={typeof window !== "undefined" && window.location.search.includes("code=") === false}
     >
       <Provider store={store}>
         <AuthBridge />

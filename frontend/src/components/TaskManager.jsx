@@ -362,7 +362,7 @@ function BoardColumn({
           onDrop(column.id);
         }
       }}
-      className={`flex h-full w-[85vw] sm:w-80 shrink-0 snap-center flex-col rounded-2xl border border-gray-200/80 dark:border-gray-800/80 bg-gray-100/60 dark:bg-gray-900/50 p-3 transition-all ${
+      className={`flex h-full w-[85vw] sm:w-72 md:w-80 lg:flex-1 lg:min-w-[260px] lg:max-w-[350px] shrink-0 lg:shrink snap-center flex-col rounded-2xl border border-gray-200/80 dark:border-gray-800/80 bg-gray-100/60 dark:bg-gray-900/50 p-3 transition-all ${
         isColumnDragging ? "opacity-30 scale-95" : ""
       } ${over ? "bg-gray-200/60 dark:bg-gray-800/60 border-blue-400/50" : ""}`}
     >
@@ -721,68 +721,89 @@ function FilterMenu({ filters, setFilters }) {
 
 /* --------------------------------- sidebar --------------------------------- */
 
-function Sidebar({ collapsed, userName, initial, picture, page, onNavigate, onLogout }) {
+function Sidebar({ mobileOpen, desktopCollapsed, onCloseMobile, userName, initial, picture, page, onNavigate, onLogout }) {
   const router = useRouter();
-  if (collapsed) return null;
   const isGuestUser = !picture && (userName === "Guest" || initial === "G");
 
+  const handleNav = (target) => {
+    onNavigate(target);
+    onCloseMobile?.();
+  };
+
   return (
-    <aside className="fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-3 py-4 shadow-2xl md:static md:w-56 md:shadow-none transition-all">
-      <div
-        onClick={() => router.push("/profile")}
-        className="mb-6 flex w-full items-center gap-2 rounded-lg px-2 py-1.5 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
-      >
-        {picture ? (
-          <img src={picture} alt={userName} className="h-6 w-6 rounded-full object-cover ring-2 ring-gray-200 dark:ring-gray-700" />
-        ) : isGuestUser ? (
-          <img src="/guest-avatar.jpg" alt="Guest Avatar" className="h-6 w-6 rounded-full object-cover ring-2 ring-gray-200 dark:ring-gray-700" />
-        ) : (
-          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gray-900 dark:bg-gray-700 text-xs font-bold text-white">
-            {initial}
-          </span>
-        )}
-        <span className="truncate text-sm font-semibold text-gray-800 dark:text-gray-100">
-          {userName}
-        </span>
-        <ChevronsUpDown
-          size={13}
-          className="ml-auto text-gray-400 dark:text-gray-500"
+    <>
+      {/* Mobile backdrop overlay */}
+      {mobileOpen && (
+        <div
+          onClick={onCloseMobile}
+          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs md:hidden"
         />
-      </div>
+      )}
 
-      <p className="mb-2 flex items-center gap-1 px-2 text-xs font-medium text-gray-400 dark:text-gray-500">
-        Workspace <ChevronDown size={12} />
-      </p>
-      <nav className="flex flex-col gap-0.5">
-        <button
-          onClick={() => onNavigate("tasks")}
-          className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium transition-colors ${
-            page === "main" || page === "task"
-              ? "bg-accent text-accent-foreground"
-              : "text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
-          }`}
-        >
-          <LayoutDashboard size={15} /> Tasks
-        </button>
-        <button
-          onClick={() => onNavigate("projects")}
-          className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium transition-colors ${
-            page === "projects" || page === "project"
-              ? "bg-accent text-accent-foreground"
-              : "text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
-          }`}
-        >
-          <FolderKanban size={15} /> Projects
-        </button>
-      </nav>
-
-      <button
-        onClick={onLogout}
-        className="mt-auto flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400"
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-3 py-4 shadow-2xl transition-transform duration-300 md:static md:w-56 md:shadow-none md:translate-x-0 ${
+          mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+        } ${desktopCollapsed ? "md:hidden" : "md:flex"}`}
       >
-        <LogOut size={15} /> Log out
-      </button>
-    </aside>
+        <div
+          onClick={() => {
+            router.push("/profile");
+            onCloseMobile?.();
+          }}
+          className="mb-6 flex w-full items-center gap-2 rounded-lg px-2 py-1.5 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+        >
+          {picture ? (
+            <img src={picture} alt={userName} className="h-6 w-6 rounded-full object-cover ring-2 ring-gray-200 dark:ring-gray-700" />
+          ) : isGuestUser ? (
+            <img src="/guest-avatar.jpg" alt="Guest Avatar" className="h-6 w-6 rounded-full object-cover ring-2 ring-gray-200 dark:ring-gray-700" />
+          ) : (
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gray-900 dark:bg-gray-700 text-xs font-bold text-white">
+              {initial}
+            </span>
+          )}
+          <span className="truncate text-sm font-semibold text-gray-800 dark:text-gray-100">
+            {userName}
+          </span>
+          <ChevronsUpDown
+            size={13}
+            className="ml-auto text-gray-400 dark:text-gray-500"
+          />
+        </div>
+
+        <p className="mb-2 flex items-center gap-1 px-2 text-xs font-medium text-gray-400 dark:text-gray-500">
+          Workspace <ChevronDown size={12} />
+        </p>
+        <nav className="flex flex-col gap-0.5">
+          <button
+            onClick={() => handleNav("tasks")}
+            className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium transition-colors ${
+              page === "main" || page === "task"
+                ? "bg-accent text-accent-foreground"
+                : "text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
+            }`}
+          >
+            <LayoutDashboard size={15} /> Tasks
+          </button>
+          <button
+            onClick={() => handleNav("projects")}
+            className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium transition-colors ${
+              page === "projects" || page === "project"
+                ? "bg-accent text-accent-foreground"
+                : "text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
+            }`}
+          >
+            <FolderKanban size={15} /> Projects
+          </button>
+        </nav>
+
+        <button
+          onClick={onLogout}
+          className="mt-auto flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400"
+        >
+          <LogOut size={15} /> Log out
+        </button>
+      </aside>
+    </>
   );
 }
 
@@ -800,6 +821,7 @@ export default function TaskManager() {
   const [view, setView] = useState("board");
   const [page, setPage] = useState("main"); // "main" | "task" | "projects" | "project"
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [fields, setFields] = useState({
     priority: true,
@@ -1077,14 +1099,10 @@ export default function TaskManager() {
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-gray-50 dark:bg-gray-950 font-sans text-gray-800 dark:text-gray-100">
-      {!sidebarCollapsed && (
-        <div
-          onClick={() => setSidebarCollapsed(true)}
-          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs md:hidden"
-        />
-      )}
       <Sidebar
-        collapsed={sidebarCollapsed}
+        mobileOpen={mobileSidebarOpen}
+        desktopCollapsed={sidebarCollapsed}
+        onCloseMobile={() => setMobileSidebarOpen(false)}
         userName={userName}
         initial={userInitial}
         picture={auth.user?.picture}
@@ -1097,8 +1115,14 @@ export default function TaskManager() {
         {/* top bar */}
         <div className="flex shrink-0 items-center gap-2 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-2.5">
           <button
-            onClick={() => setSidebarCollapsed((c) => !c)}
-            className="rounded-md p-1.5 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-300"
+            onClick={() => {
+              if (typeof window !== "undefined" && window.innerWidth < 768) {
+                setMobileSidebarOpen((o) => !o);
+              } else {
+                setSidebarCollapsed((c) => !c);
+              }
+            }}
+            className="rounded-md p-1.5 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer"
           >
             <PanelLeft size={16} />
           </button>
@@ -1309,7 +1333,7 @@ export default function TaskManager() {
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Search tasks..."
-                    className="w-40 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 py-1.5 pl-8 pr-2 text-sm text-gray-600 dark:text-gray-300 outline-none focus:border-gray-500 dark:focus:border-gray-400 sm:w-52"
+                    className="w-32 sm:w-52 md:w-64 lg:w-80 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 py-1.5 pl-8 pr-2 text-sm text-gray-600 dark:text-gray-300 outline-none focus:border-gray-500 dark:focus:border-gray-400 transition-all"
                   />
                 </div>
 
@@ -1345,8 +1369,8 @@ export default function TaskManager() {
 
       {/* AI assistant split panel */}
       <div
-        className={`shrink-0 overflow-hidden transition-[width] duration-300 ease-out ${
-          aiOpen ? "w-[400px]" : "w-0"
+        className={`transition-[width] duration-300 ease-out ${
+          aiOpen ? "w-full md:w-[380px] lg:w-[420px] shrink-0" : "w-0 overflow-hidden"
         }`}
       >
         <AiAgentPanel open={aiOpen} onClose={() => setAiOpen(false)} />

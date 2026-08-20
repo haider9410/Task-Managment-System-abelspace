@@ -133,19 +133,6 @@ function TagPill({ label, onRemove }) {
   );
 }
 
-function PriorityTag({ id, priorities }) {
-  const p =
-    priorities.find((x) => x.id === id) ?? priorities[priorities.length - 1];
-  const Icon = p.icon;
-  return (
-    <span
-      className={`inline-flex items-center gap-1 text-xs font-medium ${p.cls}`}
-    >
-      <Icon size={13} strokeWidth={2.5} />
-      {p.id}
-    </span>
-  );
-}
 
 function MiniAvatar({ initial, color }) {
   return (
@@ -200,12 +187,49 @@ function DetailRow({
   );
 }
 
+const DEFAULT_COLUMNS = [
+  { id: "todo", title: "To Do", dot: "bg-slate-400" },
+  { id: "doing", title: "Doing", dot: "bg-blue-500" },
+  { id: "completed", title: "Completed", dot: "bg-emerald-500" },
+  { id: "onhold", title: "On Hold", dot: "bg-amber-500" },
+];
+
+const DEFAULT_MEMBERS = [
+  { id: "m1", name: "Admin", color: "bg-slate-900", initial: "A" },
+  { id: "m2", name: "QA Team", color: "bg-emerald-600", initial: "Q" },
+  { id: "m3", name: "Designer", color: "bg-rose-500", initial: "D" },
+  { id: "m4", name: "Security", color: "bg-amber-500", initial: "S" },
+  { id: "m5", name: "Dev Team", color: "bg-blue-600", initial: "D" },
+  { id: "m6", name: "Product", color: "bg-pink-500", initial: "P" },
+  { id: "m7", name: "Engineer", color: "bg-indigo-500", initial: "E" },
+];
+
+const DEFAULT_PRIORITIES = [
+  { id: "High", icon: SignalMedium, cls: "text-rose-600 dark:text-rose-400" },
+  { id: "Medium", icon: SignalMedium, cls: "text-amber-600 dark:text-amber-400" },
+  { id: "Low", icon: SignalMedium, cls: "text-slate-400 dark:text-slate-500" },
+];
+
+function PriorityTag({ id, priorities = DEFAULT_PRIORITIES }) {
+  const safeP = Array.isArray(priorities) && priorities.length > 0 ? priorities : DEFAULT_PRIORITIES;
+  const p = safeP.find((x) => x.id === id) ?? safeP[safeP.length - 1];
+  const Icon = p?.icon || SignalMedium;
+  return (
+    <span
+      className={`inline-flex items-center gap-1 text-xs font-medium ${p?.cls || ""}`}
+    >
+      <Icon size={13} strokeWidth={2.5} />
+      {p?.id || id}
+    </span>
+  );
+}
+
 export default function TaskDetailPage({
   initial,
   defaultStatus,
-  columns,
-  members,
-  priorities,
+  columns = DEFAULT_COLUMNS,
+  members = DEFAULT_MEMBERS,
+  priorities = DEFAULT_PRIORITIES,
   projects = [],
   defaultProjectId = "",
   startInEditMode = false,
@@ -215,6 +239,11 @@ export default function TaskDetailPage({
   onAutoSave,
   onDuplicate,
 }) {
+  const safeColumns = Array.isArray(columns) && columns.length > 0 ? columns : DEFAULT_COLUMNS;
+  const safeMembers = Array.isArray(members) && members.length > 0 ? members : DEFAULT_MEMBERS;
+  const safePriorities = Array.isArray(priorities) && priorities.length > 0 ? priorities : DEFAULT_PRIORITIES;
+  const safeProjects = Array.isArray(projects) ? projects : [];
+
   const { user } = useAuth0();
   const isEdit = !!initial;
   const me = user?.sub || "guest";
@@ -229,27 +258,27 @@ export default function TaskDetailPage({
   const [titleError, setTitleError] = useState(false);
   const [desc, setDesc] = useState(initial?.desc ?? "");
   const [status, setStatus] = useState(
-    initial?.status ?? defaultStatus ?? columns[0].id,
+    initial?.status ?? defaultStatus ?? safeColumns[0].id,
   );
   const [priority, setPriority] = useState(
-    initial?.priority ?? priorities[1]?.id ?? priorities[0].id,
+    initial?.priority ?? safePriorities[1]?.id ?? safePriorities[0].id,
   );
-  const [memberId, setMemberId] = useState(initial?.memberId ?? members[0].id);
+  const [memberId, setMemberId] = useState(initial?.memberId ?? safeMembers[0].id);
   const [projectId, setProjectId] = useState(
     initial?.projectId ?? defaultProjectId ?? "",
   );
   const [dueDate, setDueDate] = useState(initial?.dueDate ?? "");
-  const [tags, setTags] = useState(initial?.tags ?? []);
+  const [tags, setTags] = useState(Array.isArray(initial?.tags) ? initial.tags : []);
   const [tagInput, setTagInput] = useState("");
-  const [subtasks, setSubtasks] = useState(initial?.subtasks ?? []);
+  const [subtasks, setSubtasks] = useState(Array.isArray(initial?.subtasks) ? initial.subtasks : []);
   const [subtaskInput, setSubtaskInput] = useState("");
-  const [comments, setComments] = useState(initial?.comments ?? []);
+  const [comments, setComments] = useState(Array.isArray(initial?.comments) ? initial.comments : []);
   const [comment, setComment] = useState("");
-  const [resources, setResources] = useState(initial?.resources ?? []);
+  const [resources, setResources] = useState(Array.isArray(initial?.resources) ? initial.resources : []);
   const [resourceName, setResourceName] = useState("");
   const [resourceUrl, setResourceUrl] = useState("");
   const [locked, setLocked] = useState(!!initial?.locked);
-  const [watchers, setWatchers] = useState(initial?.watchers ?? []);
+  const [watchers, setWatchers] = useState(Array.isArray(initial?.watchers) ? initial.watchers : []);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [menu, setMenu] = useState(null); // "watchers" | "share" | "more"
   const [copied, setCopied] = useState(false);
@@ -257,10 +286,10 @@ export default function TaskDetailPage({
 
   const menuRef = useOutsideClose(menu !== null, () => setMenu(null));
 
-  const col = columns.find((c) => c.id === status) ?? columns[0];
-  const assignee = members.find((m) => m.id === memberId) ?? members[0];
-  const project = projects.find((p) => p.id === projectId) ?? null;
-  const isWatching = watchers.some((w) => w.id === me);
+  const col = safeColumns.find((c) => c.id === status) ?? safeColumns[0];
+  const assignee = safeMembers.find((m) => m.id === memberId) ?? safeMembers[0];
+  const project = safeProjects.find((p) => p.id === projectId) ?? null;
+  const isWatching = Array.isArray(watchers) && watchers.some((w) => w?.id === me);
 
   const buildTask = () => ({
     id: initial?.id ?? "",
@@ -585,9 +614,9 @@ export default function TaskDetailPage({
         </div>
       </div>
 
-      <div className="flex min-h-0 flex-1 overflow-hidden">
+      <div className="flex min-h-0 flex-1 flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
         {/* main column */}
-        <div className="min-w-0 flex-1 overflow-y-auto px-8 py-6">
+        <div className="min-w-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 lg:px-8 lg:py-6">
           {!isEditing && isEdit ? (
             <div className="mb-6 space-y-3 rounded-xl border border-gray-100 dark:border-gray-800/60 bg-gray-50/30 dark:bg-gray-900/30 p-4">
               <div className="flex items-center justify-between gap-3">
@@ -935,7 +964,7 @@ export default function TaskDetailPage({
 
         {/* right sidebar */}
         {sidebarOpen && (
-          <div className="w-72 shrink-0 overflow-y-auto border-l border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-4">
+          <div className="w-full lg:w-72 shrink-0 border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-4">
             <div className="mb-4 rounded-xl border border-gray-200 dark:border-gray-800 p-3">
               <div className="mb-1 flex items-center justify-between">
                 <span className="flex items-center gap-1 text-xs font-semibold text-gray-500 dark:text-gray-400">
@@ -958,7 +987,7 @@ export default function TaskDetailPage({
                 }
                 popover={(close) => (
                   <>
-                    {columns.map((opt) => (
+                    {safeColumns.map((opt) => (
                       <button
                         type="button"
                         key={opt.id}
@@ -1023,7 +1052,7 @@ export default function TaskDetailPage({
                         />
                       )}
                     </button>
-                    {projects.map((p) => (
+                    {safeProjects.map((p) => (
                       <button
                         type="button"
                         key={p.id}
@@ -1056,12 +1085,12 @@ export default function TaskDetailPage({
                 icon={SignalMedium}
                 label="Priority"
                 valueNode={
-                  <PriorityTag id={priority} priorities={priorities} />
+                  <PriorityTag id={priority} priorities={safePriorities} />
                 }
                 popover={(close) => (
                   <>
-                    {priorities.map((opt) => {
-                      const Ic = opt.icon;
+                    {safePriorities.map((opt) => {
+                      const Ic = opt.icon || SignalMedium;
                       return (
                         <button
                           type="button"
@@ -1073,7 +1102,7 @@ export default function TaskDetailPage({
                           className="flex w-full items-center justify-between px-3 py-1.5 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-800"
                         >
                           <span
-                            className={`flex items-center gap-2 ${opt.cls}`}
+                            className={`flex items-center gap-2 ${opt.cls || ""}`}
                           >
                             <Ic size={13} /> {opt.id}
                           </span>
@@ -1096,15 +1125,15 @@ export default function TaskDetailPage({
                 valueNode={
                   <span className="flex items-center gap-2">
                     <MiniAvatar
-                      initial={assignee.initial}
-                      color={assignee.color}
+                      initial={assignee?.initial || "A"}
+                      color={assignee?.color || "bg-slate-900"}
                     />{" "}
-                    {assignee.name}
+                    {assignee?.name || "Admin"}
                   </span>
                 }
                 popover={(close) => (
                   <>
-                    {members.map((m) => (
+                    {safeMembers.map((m) => (
                       <button
                         type="button"
                         key={m.id}
