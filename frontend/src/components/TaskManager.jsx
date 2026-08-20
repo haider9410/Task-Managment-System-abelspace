@@ -276,7 +276,8 @@ function ColumnMenu({ columnId, onAdd, onDeleteColumnTasks }) {
 /* --------------------------------- board --------------------------------- */
 
 function TaskCard({ task, onOpen, onDelete, onDragStart, onDropOnCard, dragging }) {
-  const displayTags = task.tags && task.tags.length > 0 ? task.tags : ["Deployment", "Deployment"];
+  if (!task) return null;
+  const displayTags = Array.isArray(task.tags) && task.tags.length > 0 ? task.tags : [];
   const displayMember = memberById(task.memberId)?.name || "Admin";
 
   return (
@@ -532,7 +533,7 @@ function TableGroup({
                   {fields.labels && (
                     <td className="px-4 py-2.5">
                       <div className="flex flex-wrap gap-1">
-                        {t.tags.map((tag) => (
+                        {(Array.isArray(t?.tags) ? t.tags : []).map((tag) => (
                           <TagPill key={tag} label={tag} />
                         ))}
                       </div>
@@ -874,7 +875,7 @@ export default function TaskManager() {
 
   const visibleTasks = useMemo(() => {
     return tasks.filter((t) => {
-      const matchesSearch = t.title
+      const matchesSearch = (t?.title || "")
         .toLowerCase()
         .includes(search.toLowerCase());
       const matchesPriority =

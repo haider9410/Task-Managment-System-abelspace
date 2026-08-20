@@ -253,7 +253,21 @@ export default function TaskDetailPage({
   const [isEditing, setIsEditing] = useState(startInEditMode || !isEdit);
   useEffect(() => {
     setIsEditing(startInEditMode || !initial);
-  }, [initial, startInEditMode]);
+    setTitle(initial?.title ?? "");
+    setTitleError(false);
+    setDesc(initial?.desc ?? "");
+    setStatus(initial?.status ?? defaultStatus ?? safeColumns[0].id);
+    setPriority(initial?.priority ?? safePriorities[1]?.id ?? safePriorities[0].id);
+    setMemberId(initial?.memberId ?? safeMembers[0].id);
+    setProjectId(initial?.projectId ?? defaultProjectId ?? "");
+    setDueDate(initial?.dueDate ?? "");
+    setTags(Array.isArray(initial?.tags) ? initial.tags : []);
+    setSubtasks(Array.isArray(initial?.subtasks) ? initial.subtasks : []);
+    setComments(Array.isArray(initial?.comments) ? initial.comments : []);
+    setResources(Array.isArray(initial?.resources) ? initial.resources : []);
+    setLocked(!!initial?.locked);
+    setWatchers(Array.isArray(initial?.watchers) ? initial.watchers : []);
+  }, [initial, startInEditMode, defaultStatus, defaultProjectId]);
   const [title, setTitle] = useState(initial?.title ?? "");
   const [titleError, setTitleError] = useState(false);
   const [desc, setDesc] = useState(initial?.desc ?? "");
